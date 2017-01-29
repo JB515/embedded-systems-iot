@@ -1,4 +1,4 @@
-def add(a, b):
-	return a+b
+#MAIN SCRIPT FILE#
+#IMPORT MODULES HERE#
 
-print(add(3,4))
+#I2C connected to pins 4 and 5 (SCL and SDA)
