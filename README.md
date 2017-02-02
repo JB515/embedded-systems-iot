@@ -23,3 +23,8 @@ A pitot is the small tube visible on aircraft wings and noses that uses air pres
 ## Automatic door/window closer
 
 If the sensor detects a draft coming from an open door or window, close it automatically. Simples!
+
+
+## Environmentally aware Washing Line
+
+Attach system to washing line. System meaures wind speed and uses this to determine when the clothes will dry. The time taken would be variable. WInd speed could go up to about 8mph, if wind speed is so high that the clothes blow away, could send alert to user.

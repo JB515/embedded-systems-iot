@@ -24,5 +24,5 @@ while True:
 	data = float (data*12.2) / 65535.0
 	print(“( voltage: ” + str(data) + “, speed: ” + str(voltToFlow(data)) + “)”)
 
+#I2C connected to pins 4 and 5 (SCL and SDA)
 
-	
