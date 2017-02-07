@@ -1,6 +1,7 @@
 # ampy --port /dev/tty.SLAB_USBtoUART put Desktop/embedded-systems-iot/main.py
 # screen /dev/tty.SLAB_USBtoUART 115200
 
+import sys
 import machine
 import ads1x15
 import time
@@ -26,35 +27,44 @@ sta_if = network.WLAN(network.STA_IF)
 sta_if.active(True)
 sta_if.connect('EEERover','exhibition')
 
-while not sta_if.isconnected():
-	sta_if.connect('EEERover','exhibition')
+waitCounter = 0
+while (not sta_if.isconnected()) and (waitCounter < 100):
+	time.sleep(0.1)
+	waitCounter += 1
 
-print("Wifi connected")
-
+if sta_if.isconnected():
+	print("Wifi connected",flush=True)
+else:
+	print("Wifi not connected",flush=True)
+	sys.exit()
+print("reached marker 1",flush=True)
 
 #MQTT setup
-client = MQTTClient(bytes(machine.unique_id()), "192.168.0.10")
+client = MQTTClient(machine.unique_id(), "192.168.0.10")
 client.connect()
 
 i2c = machine.I2C(scl=machine.Pin(5), sda=machine.Pin(4), freq=100000)
 print(i2c.scan())
 
 sensor = ads1x15.ADS1115(i2c, 0x48)
-"""
+
 loopCount = 0
 
 while True:
 	time.sleep(0.5)
+	print("reached marker loop",flush=True)
+	"""
 	data = sensor.read(0)
+	
 	data = float (data*12.2) / 65535.0
-	print("( voltage: " + str(data) + ", speed: " + str(voltToFlow(data)) + ")")
+	print("( voltage: " + str(data) + ", speed: " + str(voltToFlow(data)) + ")", flush=True)
 	
 	if (loopCount % 10 == 0):
 		client.publish("esys/embedded-systeam/sensor/data",bytes(data,'utf-8'))
-
+	
 	#payload = json.dumps({‘name’:’speed’, ‘speedrecord’:data})
-
+	"""
 	loopCount += 1
-
+	
 #I2C connected to pins 4 and 5 (SCL and SDA)
-"""
+
