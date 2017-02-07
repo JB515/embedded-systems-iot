@@ -33,11 +33,11 @@ while (not sta_if.isconnected()) and (waitCounter < 100):
 	waitCounter += 1
 
 if sta_if.isconnected():
-	print("Wifi connected",flush=True)
+	print("Wifi connected")
 else:
-	print("Wifi not connected",flush=True)
+	print("Wifi not connected")
 	sys.exit()
-print("reached marker 1",flush=True)
+print("reached marker 1")
 
 #MQTT setup
 client = MQTTClient(machine.unique_id(), "192.168.0.10")
@@ -51,20 +51,20 @@ sensor = ads1x15.ADS1115(i2c, 0x48)
 loopCount = 0
 
 while True:
+
 	time.sleep(0.5)
-	print("reached marker loop",flush=True)
-	"""
-	data = sensor.read(0)
 	
+	data = sensor.read(0)
 	data = float (data*12.2) / 65535.0
-	print("( voltage: " + str(data) + ", speed: " + str(voltToFlow(data)) + ")", flush=True)
+	print("( voltage: " + str(data) + ", speed: " + str(voltToFlow(data)) + ")")
 	
 	if (loopCount % 10 == 0):
-		client.publish("esys/embedded-systeam/sensor/data",bytes(data,'utf-8'))
+		
+		client.publish(b"esys/embedded-systeam/sensor/data", bytearray(str(voltToFlow(data))))
 	
 	#payload = json.dumps({‘name’:’speed’, ‘speedrecord’:data})
-	"""
-	loopCount += 1
 	
+	loopCount += 1
+
 #I2C connected to pins 4 and 5 (SCL and SDA)
 
