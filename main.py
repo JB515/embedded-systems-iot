@@ -2,6 +2,7 @@
 # screen /dev/tty.SLAB_USBtoUART 115200
 
 import sys
+import servo
 import machine
 import ads1x15
 import time
@@ -16,6 +17,9 @@ def voltToFlow(voltage):
 		return (voltage * 1.73033) - 0.461538
 	else:
 		return 0
+
+def motorSpeed(fraction):
+	return 40 + (75.0*fraction)
 
 #MAIN
 
@@ -36,7 +40,7 @@ if sta_if.isconnected():
 	print("Wifi connected")
 else:
 	print("Wifi not connected")
-	sys.exit()
+	#sys.exit()
 print("reached marker 1")
 
 #MQTT setup
@@ -48,23 +52,31 @@ print(i2c.scan())
 
 sensor = ads1x15.ADS1115(i2c, 0x48)
 
+#Motor setup
+servo = servo.Servo(machine.Pin(14))
+servo.write_angle(degrees = 10)
+
+
 loopCount = 0
-
+direction = 1
+angle = 10
 while True:
-
-	time.sleep(0.5)
+	dataPoints = [0.0]
 	
-	data = sensor.read(0)
-	data = float (data*12.2) / 65535.0
-	print("( voltage: " + str(data) + ", speed: " + str(voltToFlow(data)) + ")")
-	
-	if (loopCount % 10 == 0):
+	for i in range(0,16):
 		
-		client.publish(b"esys/embedded-systeam/sensor/data", bytearray(str(voltToFlow(data))))
-	
-	#payload = json.dumps({‘name’:’speed’, ‘speedrecord’:data})
-	
-	loopCount += 1
+		angle = 10 + (i*5*direction)
+		servo.write_angle(degrees = angle)
+		data = sensor.read(0)
+		data = float (data*12.2) / 65535.0
+		print("( voltage: " + str(data) + ", speed: " + str(voltToFlow(data)) + ")")
+		dataPoints.append(voltToFlow(data))
+		time.sleep(0.5)
+
+	direction = direction * (-1)
+	speed = max(dataPoints)
+	client.publish(b"esys/embedded-systeam/sensor/data", bytearray(str(voltToFlow(speed))))
+	print("Published to broker: " + str(voltToFlow(speed)))
 
 #I2C connected to pins 4 and 5 (SCL and SDA)
 
