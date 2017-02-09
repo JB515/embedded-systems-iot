@@ -1,4 +1,4 @@
-import paho.mqtt.client as mqtt  #import the c
+import paho.mqtt.client as mqtt  #import the client
 import time
 
 ############################################################
@@ -16,8 +16,8 @@ y = 160/x
 ######################## GLOBALS ##########################
 ###########################################################
 
-#broker_address="192.168.0.10"
-broker_address="iot.eclipse.org"
+
+broker_address = "192.168.0.10"
 topic = "esys/embedded-systeam/sensor/data"
 
 started = False
@@ -29,25 +29,27 @@ airFlow = 0.0
 ##################### MQTT FUNCTIONS ######################
 ###########################################################
 
-def onConnect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, rc):
     m="Connected flags"+str(flags)+"result code "\
     +str(rc)+"c_id  "+str(client)
-    #print(m)
+    print(m, flush = True)
 
-def onLog(client, userdata, level, buf):
-    #print("log: ",buf)
+def on_log(client, userdata, level, buf):
     pass
+    #print("log: ",buf)
+    
 
-def onMessage(c, userdata, message):
+def on_message(c, userdata, message):
     global airFlow, started
     msg = message.payload.decode("utf-8")
-    #print("message received "+str(msg))
+    #print("message received "+str(msg), flush = True)
     airFlow = float(msg)
-    print("new airflow: "+str(airFlow)+" m/s")
-    if not started:
-        print ("Starting drying timer!")
-        started = True
-        #startTimer()
+    if not (airFlow == 0.6463728):   #annoying msg that won't go away
+        print("new airflow: "+str(airFlow)+" m/s", flush = True)
+        if not started:
+            print ("Starting drying timer!", flush = True)
+            started = True
+            #startTimer()
 
 ###########################################################
 ##################### OTHER FUNCTIONS #####################
@@ -58,21 +60,22 @@ def onMessage(c, userdata, message):
 ########################## MAIN ###########################
 ###########################################################
 
-print("starting client")
-c = mqtt.Client("P1")       #create new instance
-c.on_connect = onConnect   #attach function to callback
-c.on_message = onMessage   #attach function to callback
-c.on_log = onLog
+print("starting client", flush = True)
+c = mqtt.Client("P1", protocol=mqtt.MQTTv31)       #create new instance
+c.on_connect = on_connect   #attach function to callback
+c.on_message = on_message   #attach function to callback
+c.on_log = on_log
 time.sleep(1)
-print("attempting to connect")
+print("attempting to connect to broker", flush = True)
 c.connect(broker_address)   #connect to broker
 print("starting loop")
 c.loop_start()              #start the loop
 c.subscribe(topic)
-print("checking for messages")
-
+print("checking for messages", flush = True)
+time.sleep(5)
 while True:
     time.sleep(1)
+    c.subscribe(topic)
 
 
 c.disconnect()
