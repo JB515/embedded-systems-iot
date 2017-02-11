@@ -1,0 +1,7 @@
+//Note: this is just an exmaple of how to format the JSON string for transmission, or we could just use a micropython library to serialise an object
+{
+    "time": 0,
+    "airFlow": 0,
+    "temperature":0,
+    "rain":0
+},
