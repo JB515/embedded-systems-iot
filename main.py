@@ -10,10 +10,10 @@ import network
 import ujson as json
 from umqtt.simple import MQTTClient
 
-def sigToFlow(signal):
+def signalToFlow(signal):
 
 	#Convert ADC signal to true voltage
-	voltage = float (signal*12.2) / 65535.0
+	voltage = float(signal*12.2) / 65535.0
 
 	#Convert voltage to airflow, as per datasheet
 	if (voltage < 0.7 and voltage >= 0.5):
@@ -23,6 +23,9 @@ def sigToFlow(signal):
 	else:
 		return 0.0
 
+def timerFinished():
+	LED = machine.Pin(12)
+	LED.high()					# Switch on LED when remote timer is finished
 
 #MAIN
 
@@ -51,7 +54,9 @@ else:
 
 # MQTT setup
 client = MQTTClient(machine.unique_id(), "192.168.0.10")
+client.set_callback(timerFinished)							# Function to call when timer finished
 client.connect()
+client.subscribe(b"emsys/embedded-systeam/sensor/status")	# Subscribe for finished message
 
 # I2C setup
 i2c = machine.I2C(scl=machine.Pin(5), sda=machine.Pin(4), freq=100000)
