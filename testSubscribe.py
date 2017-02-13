@@ -149,7 +149,7 @@ while True:
     if gStarted and not gPaused and not gRaining:
         print("Time to dry: "+timeStr(gTime)+"s         ", end="\r", flush = True)
         timeTick(c)
-    c.publish(gPublishTopic, "{\"finish\":False}")
+    
 
 
 c.disconnect()
