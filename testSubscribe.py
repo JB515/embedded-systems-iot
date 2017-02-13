@@ -1,5 +1,6 @@
 import paho.mqtt.client as mqtt  #import the client
 import time
+import json
 
 ##################################################################################
 ################################## OVERVIEW ######################################
@@ -15,12 +16,14 @@ dryingTime = 160/(gAirFlow)
 ################################### GLOBALS #####################################
 #################################################################################
 
-#gBrokerAddress = "192.168.0.10"
-gBrokerAddress = "iot.eclipse.org"
+gBrokerAddress = "192.168.0.10"
+#gBrokerAddress = "iot.eclipse.org"
+
 gTopic = "esys/embedded-systeam/sensor/data"
 
 gStarted = False
 gPaused = False
+gRaining = False
 gTotalTime = -1        #timer in seconds
 gTime = -1             #timer progress
 gAirFlow = 0.0
@@ -42,24 +45,29 @@ def on_log(client, userdata, level, buf):
     
 
 def on_message(c, userdata, message):
-    global gAirFlow, gStarted
+    global gAirFlow, gStarted, gRaining
     msg = message.payload.decode("utf-8")
-    #print("message received "+str(msg), flush = True)
-    gAirFlow = float(msg)
-    if not (gAirFlow == 0.6463728):   #annoying msg that won't go away
-        print("\nnew AirFlow: "+str(gAirFlow)+" m/s", flush = True)
-        if not gStarted:
-            startTimer()
-        else:
-            updateTimer()
+    if not (str(msg) == "0.6463728"):
+        #print("message received "+str(msg), flush = True)
+        #gAirFlow = float(msg)
+    
+        data = json.loads(str(msg))
+        gAirFlow = float(data["airFlow"])
+        gRaining = data["rain"]
+        if not (gAirFlow == 0.6463728):   #annoying msg that won't go away
+            print("\nnew AirFlow: "+str(gAirFlow)+" m/s", flush = True)
+            if not gStarted:
+                startTimer()
+            else:
+                updateTimer()
 
 #################################################################################
 ################################ OTHER FUNCTIONS ################################
 #################################################################################
 
 def startTimer():
-    global gAirFlow, gTotalTime, gStarted, gTime
-    if gAirFlow >= 0.00001:
+    global gAirFlow, gTotalTime, gStarted, gTime, gRaining
+    if gAirFlow >= 0.01 and not gRaining:
         #calculate new drying timer in seconds
         gTotalTime = int((9600.0/float(gAirFlow)))  
         print ("Starting timer! Total time: "+
@@ -68,15 +76,20 @@ def startTimer():
         gPaused = False
     else:
         gTotalTime = -1
+        if gRaining:
+            print ("Currently raining                      ", flush = True)
         print ("Cannot start timer                      ", flush = True)
         gStarted = False
     gTime = gTotalTime
 
 def updateTimer():
-    global gAirFlow, gPaused, gTime, gTotalTime
-    if gAirFlow <= 0.00001:
+    global gAirFlow, gPaused, gTime, gTotalTime, gRaining
+    if gAirFlow <= 0.01:
         gPaused = True
         print("Timer paused, waiting for air flow.      ", flush = True)
+    elif gRaining:
+        gPaused = True
+        print("Timer paused due to rain.      ", flush = True)
     else:
         gPaused = False
         #calculate current progress so far
@@ -106,9 +119,12 @@ def timeStr(t):
 #################################################################################
 ##################################### MAIN ######################################
 #################################################################################
+#data = json.loads("{\"airFlow\": 3.4}")
+#gAirFlow = data["airFlow"]
+#print("airFlow = "+str(gAirFlow),flush = True)
 
 print("starting client", flush = True)
-c = mqtt.Client("P1", protocol=mqtt.MQTTv31)        #create new instance
+c = mqtt.Client("P2", protocol=mqtt.MQTTv31)        #create new instance
 c.on_connect = on_connect                           #attach callback functions
 c.on_message = on_message
 c.on_log = on_log
@@ -123,7 +139,7 @@ print("checking for messages", flush = True)
 while True:
     time.sleep(1)
     c.subscribe(gTopic)
-    if gStarted and not gPaused:
+    if gStarted and not gPaused and not gRaining:
         print("Time to dry: "+timeStr(gTime)+"s         ", end="\r", flush = True)
         timeTick()
 
