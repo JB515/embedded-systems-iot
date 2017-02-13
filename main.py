@@ -5,15 +5,16 @@ import sys
 import servo
 import machine
 import ads1x15
+import SI7021
 import time
 import network
 import ujson as json
 from umqtt.simple import MQTTClient
 
-def sigToFlow(signal):
+def signalToFlow(signal):
 
 	#Convert ADC signal to true voltage
-	voltage = float (signal*12.2) / 65535.0
+	voltage = float(signal*12.2) / 65535.0
 
 	#Convert voltage to airflow, as per datasheet
 	if (voltage < 0.7 and voltage >= 0.5):
@@ -23,6 +24,10 @@ def sigToFlow(signal):
 	else:
 		return 0.0
 
+def timerFinished():
+	LED = machine.Pin(13)
+	LED.high()					# Switch on LED when remote timer is finished
+	print("Finished", flush=True)
 
 #MAIN
 
@@ -51,17 +56,23 @@ else:
 
 # MQTT setup
 client = MQTTClient(machine.unique_id(), "192.168.0.10")
+client.set_callback(timerFinished)							# Function to call when timer finished
 client.connect()
+client.subscribe(b"esys/embedded-systeam/sensor/status")	# Subscribe for finished message
 
 # I2C setup
 i2c = machine.I2C(scl=machine.Pin(5), sda=machine.Pin(4), freq=100000)
 print(i2c.scan())
 
-sensor = ads1x15.ADS1115(i2c, 0x48) # Set I2C device (address determined in advance)
+tempSensor = SI7021.Si7021(i2c)
+flowSensor = ads1x15.ADS1115(i2c, 0x48) # Set I2C device (address determined in advance)
 
 #Motor setup
 servo = servo.Servo(machine.Pin(14))
 servo.write_angle(degrees = 10)		# Set initial angle to 10deg
+
+# Start with LED off
+machine.Pin(13).low()
 
 # Main loop - runs until error
 while True:
@@ -74,7 +85,7 @@ while True:
 		servo.write_angle(degrees = angle)		# Rotate sensor
 
 		# Read and format air speed from sensor
-		data = sensor.read(0)
+		data = flowSensor.read(0)
 		speed = signalToFlow(data)				# Convert to voltage ()
 		print("( speed: " + str(speed) + ")")
 		if speed >= maxSpeed:					# Test and update highest speed in this rotation
@@ -94,14 +105,14 @@ while True:
 
 	# Package measured data in a JSON object
 	payload = json.dumps({	"time": time.time(),							# Time is unique ID
-							"airFlow": voltToFlow(maxVoltage),				# Air speed
-							"temperature":25,								# Ambient temperature (currently hard-coded, awaiting sensor)
+							"airFlow": maxSpeed,							# Air speed
+							"temperature":tempSensor.temperature,			# Ambient temperature
 							"rain":isRaining})								# Rain (boolean, true for raining)
 	# Send data to MQTT broker
 	client.publish(b"esys/embedded-systeam/sensor/data", bytearray(payload))
 
 	# Diagnostic print out (could be set with hardware jumper)
-	print("Published to broker: " + str(voltToFlow(maxVoltage)))
+	print("Published to broker: " + str(maxSpeed))
 
 	# Reset servo
 	servo.write_angle(degrees = 10)
