@@ -20,6 +20,7 @@ gBrokerAddress = "192.168.0.10"
 #gBrokerAddress = "iot.eclipse.org"
 
 gTopic = "esys/embedded-systeam/sensor/data"
+gPublishTopic = "esys/embedded-systeam/sensor/status"
 
 gStarted = False
 gPaused = False
@@ -47,19 +48,18 @@ def on_log(client, userdata, level, buf):
 def on_message(c, userdata, message):
     global gAirFlow, gStarted, gRaining
     msg = message.payload.decode("utf-8")
-    if not (str(msg) == "0.6463728"):
+    if not (str(msg) == "0.6463728"): #annoying msg that won't go away
         #print("message received "+str(msg), flush = True)
         #gAirFlow = float(msg)
     
         data = json.loads(str(msg))
         gAirFlow = float(data["airFlow"])
         gRaining = data["rain"]
-        if not (gAirFlow == 0.6463728):   #annoying msg that won't go away
-            print("\nnew AirFlow: "+str(gAirFlow)+" m/s", flush = True)
-            if not gStarted:
-                startTimer()
-            else:
-                updateTimer()
+        print("\nnew AirFlow: "+str(gAirFlow)+" m/s", flush = True)
+        if not gStarted:
+            startTimer()
+        else:
+            updateTimer()
 
 #################################################################################
 ################################ OTHER FUNCTIONS ################################
@@ -69,7 +69,8 @@ def startTimer():
     global gAirFlow, gTotalTime, gStarted, gTime, gRaining
     if gAirFlow >= 0.01 and not gRaining:
         #calculate new drying timer in seconds
-        gTotalTime = int((9600.0/float(gAirFlow)))  
+        gTotalTime = min(int((9600.0/float(gAirFlow))), 240*60)
+        #gTotalTime = max(int ((40.0*math.log10((1.2*float(gAirFlow))-1) + 90)* 60.0), 240)
         print ("Starting timer! Total time: "+
             timeStr(gTotalTime)+"s", flush = True)
         gStarted = True
@@ -95,20 +96,26 @@ def updateTimer():
         #calculate current progress so far
         progress = float(gTime)/float(gTotalTime)
         #then calculate what the new total time would be with new speed
-        gTotalTime = int((9600.0/float(gAirFlow)))
+        gTotalTime = min(int((9600.0/float(gAirFlow))), 240*60)
+        #gTotalTime = max(int ((40.0*math.log10((1.2*float(gAirFlow))-1) + 90)* 60), 240)
         #calculate gTime based on progress
         gTime = int(float(gTotalTime)*progress)
         print("Updating time: "+timeStr(gTime)+"        ", flush = True)
 
-def timeTick():
+def finishTimer(c):
+    global gTime, gTotalTime, gStarted, gPaused
+    #Send alarm when finished - todo
+    c.publish(gPublishTopic, "{\"finish\":True}")
+    gStarted = False
+    gTotalTime = gTime = -1
+    print("\nFinished drying clothes!           ", flush = True)
+
+def timeTick(c):
     global gTime, gTotalTime, gStarted, gPaused
     if not gPaused:
         gTime -= 1
         if gTime < 0:
-            #Send alarm when finished - todo
-            gStarted = False
-            gTotalTime = gTime = -1
-            print("\nFinished drying clothes!           ", flush = True)
+            finishTimer(c)
 
 def timeStr(t):
     hours = int(t/3600)
@@ -141,7 +148,9 @@ while True:
     c.subscribe(gTopic)
     if gStarted and not gPaused and not gRaining:
         print("Time to dry: "+timeStr(gTime)+"s         ", end="\r", flush = True)
-        timeTick()
+        timeTick(c)
+    c.publish(gPublishTopic, "{\"finish\":False}")
+
 
 c.disconnect()
 c.loop_stop()
