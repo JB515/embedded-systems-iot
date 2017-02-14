@@ -21,8 +21,8 @@ Drying times:
 ################################### GLOBALS #####################################
 #################################################################################
 
-#gBrokerAddress = "192.168.0.10"
-gBrokerAddress = "iot.eclipse.org"
+gBrokerAddress = "192.168.0.10"
+#gBrokerAddress = "iot.eclipse.org"
 
 gSubscribeTopic = "esys/embedded-systeam/sensor/data"
 gPublishTopic = "esys/embedded-systeam/sensor/status"
