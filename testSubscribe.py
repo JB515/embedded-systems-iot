@@ -7,7 +7,7 @@ import json
 ##################################################################################
 
 '''
-Drying times:
+Drying times::
 * http://www.conservationphysics.org/wetstuff/wetstuff01.php
 * drying at 0m/s at 15C = approx 240 min to dry
 * drying at 2m/s at 15C = approx 80 min to dry
