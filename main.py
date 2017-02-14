@@ -90,11 +90,13 @@ servo = servo.Servo(machine.Pin(14))
 servo.write_angle(degrees = 10)		# Set initial angle to 10deg
 
 # Start with LED off
-machine.Pin(13).low()
+LED = machine.Pin(13)
+LED.value(0)
 
 # Main loop - runs until error
 while True:
-	maxSpeed = 0.0	# Variable to accumulate highest wind speed whilst rotating
+	maxSpeed = 0.0								# Variable to accumulate highest wind speed whilst rotating
+	isRaining = False
 	angle = 10
 
 	for i in range(0,32):						# Rotate the sensor in 5 degree steps
@@ -111,12 +113,15 @@ while True:
 
 		# Test for rain
 		rain = machine.Pin(15, machine.Pin.IN)
-		if rain.value() == 1:
+		if rain.value() == 0:
 			print("rain")
 			isRaining = True
 		else:
 			print("no rain")
 			isRaining = False
+
+		# Check if finished
+		client.check_msg()
 
 		# Sleeping saves power and network traffic - frequent updates not necessary
 		time.sleep(1)
