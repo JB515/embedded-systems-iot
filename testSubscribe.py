@@ -69,9 +69,11 @@ def onMessage(c, userdata, message):
             startTimer()
         else:
             updateTimer()
-    except ValueError:
+    except (ValueError):
         print("Error: could not read JSON payload", flush = True)
-
+    except (TypeError):
+        pass
+        
 #################################################################################
 ################################ OTHER FUNCTIONS ################################
 #################################################################################
