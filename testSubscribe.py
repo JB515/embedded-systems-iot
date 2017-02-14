@@ -3,18 +3,19 @@ import time
 import json
 
 ##################################################################################
-################################## OVERVIEW ######################################
+#################################### MISC ########################################
 ##################################################################################
 
 '''
 Drying times:
 * http://www.conservationphysics.org/wetstuff/wetstuff01.php
+* drying at 0m/s at 15C = approx 240 min to dry
 * drying at 2m/s at 15C = approx 80 min to dry
 * drying at 0m/s at 20C = approx 120 min to dry
 * drying at 2m/s at 20C = approx 55 min to dry
 * => drying time = min(max(int(60.0*(240.0/(1.0 + (0.2*(gTemperature-15.0))
 *               + (gAirFlow*(gTemperature/15.0))))), 0), 14400)
-* (We should have just used a machine learning algorithm lol)
+* (We should just use a machine learning algorithm in the future)
 '''
 
 #################################################################################
@@ -49,8 +50,8 @@ def onConnect(client, userdata, flags, rc):
     print(m, flush = True)
 
 def onLog(client, userdata, level, buf):
-    pass
     #print("log: ",buf, flush = True)
+    pass
     
 def onMessage(c, userdata, message):
     global gAirFlow, gStarted, gRaining, gTemperature
@@ -78,14 +79,9 @@ def onMessage(c, userdata, message):
 #start new timer
 def startTimer():
     global gAirFlow, gTotalTime, gStarted, gTime, gRaining, gTemperature, gPaused
-    #if gAirFlow >= 0.01 and not gRaining:
-    if (gAirFlow > 0.0 or gTemperature >= 15) and not gRaining:
+    if (gAirFlow > 0.0 or gTemperature >= 5.0) and not gRaining:
         #calculate new drying timer in seconds
-        if gTemperature < 15:   #too cold to dry clothes, use only air flow
-            gTotalTime = min(int((9600.0/float(gAirFlow))+120.0), 240*60)
-        else:
-            gTotalTime = min(max(int(60.0*(240.0/(1.0 + (0.2*(gTemperature-15.0)) +
-                (gAirFlow*(gTemperature/15.0))))), 0), 14400)
+        gTotalTime = calculateTime(gAirFlow, gTemperature)
         print ("Starting timer! Total time: "+
             timeStr(gTotalTime)+"s                      ", flush = True)
         gStarted = True
@@ -101,17 +97,13 @@ def startTimer():
 #update timer when air flow changes
 def updateTimer():
     global gAirFlow, gPaused, gTime, gTotalTime, gRaining, gTemperature
-    if gAirFlow == 0.0 and gTemperature < 15.0:
+    if gAirFlow == 0.0 and gTemperature < 5.0:
         gPaused = True
         print("Paused: waiting for air flow and heat.   ", flush = True)
     elif gRaining:
         gPaused = True
         #reset timer
-        if gTemperature < 15:
-            gTotalTime = min(int((9600.0/float(gAirFlow))+120.0), 240*60)
-        else:
-            gTotalTime = min(max(int(60.0*(240.0/(1.0 + (0.2*(gTemperature-15.0)) +
-                (gAirFlow*(gTemperature/15.0))))), 0), 14400)
+        gTotalTime = calculateTime(gAirFlow, gTemperature)
         gTime = int(float(gTotalTime))
         print("Timer stopped and reset due to rain.     ", flush = True)
     else:
@@ -119,11 +111,7 @@ def updateTimer():
         #calculate current progress so far
         progress = float(gTime)/float(gTotalTime)
         #calculate what the new total time would be with new data
-        if gTemperature < 15:
-            gTotalTime = min(int((9600.0/float(gAirFlow))+120.0), 240*60)
-        else:
-            gTotalTime = min(max(int(60.0*(240.0/(1.0 + (0.2*(gTemperature-15.0)) +
-                (gAirFlow*(gTemperature/15.0))))), 0), 14400)
+        gTotalTime = calculateTime(gAirFlow, gTemperature)
         #calculate gTime based on progress
         gTime = int(float(gTotalTime)*progress)
         print("Updating time: "+timeStr(gTime)+"        ", flush = True)
@@ -144,7 +132,18 @@ def timeTick(c):
         if gTime < 0:
             finishTimer(c)
 
-#format seconds as HH:MM:SS
+#return drying time in seconds based on data
+def calculateTime(airFlow, temperature):
+    if temperature < 15.0 and airFlow == 0.0: #too cold to dry clothes
+        return 14400
+    elif temperature < 15.0: #use only air flow
+        return min(int((9600.0/float(airFlow))+120.0), 14400)
+    else:
+        k = (1.0 + (0.2*(temperature-15.0)) + (airFlow*(temperature/15.0)))
+        newTime = int(60.0*(240.0/k))
+        return min(max(newTime, 0), 14400)
+
+#return seconds formatted as HH:MM:SS
 def timeStr(t):
     hours = int(t/3600)
     minutes = int((t%3600)/60)
