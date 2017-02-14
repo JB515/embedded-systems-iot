@@ -112,6 +112,7 @@ def updateTimer():
         else:
             gTotalTime = min(max(int(60.0*(240.0/(1.0 + (0.2*(gTemperature-15.0)) +
                 (gAirFlow*(gTemperature/15.0))))), 0), 14400)
+        gTime = int(float(gTotalTime))
         print("Timer stopped and reset due to rain.     ", flush = True)
     else:
         gPaused = False
