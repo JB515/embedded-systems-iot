@@ -38,11 +38,6 @@ def signalToFlow(signal):
 	else:
 		return 0.0
 
-def timerFinished():
-	LED = machine.Pin(13)
-	LED.high()					# Switch on LED when remote timer is finished
-	print("Finished", flush=True)
-
 #################################################################################
 ##################################### MAIN ######################################
 #################################################################################
@@ -74,9 +69,7 @@ else:
 
 # MQTT setup
 client = MQTTClient(machine.unique_id(), "192.168.0.10")
-client.set_callback(timerFinished)							# Function to call when timer finished
 client.connect()
-client.subscribe(b"esys/embedded-systeam/sensor/status")	# Subscribe for finished message
 
 # I2C setup
 i2c = machine.I2C(scl=machine.Pin(5), sda=machine.Pin(4), freq=100000)
@@ -88,10 +81,6 @@ flowSensor = ads1x15.ADS1115(i2c, 0x48) # Set I2C device (address determined in 
 #Motor setup
 servo = servo.Servo(machine.Pin(14))
 servo.write_angle(degrees = 10)		# Set initial angle to 10deg
-
-# Start with LED off
-LED = machine.Pin(13)
-LED.value(0)
 
 # Main loop - runs until error
 while True:
@@ -120,9 +109,6 @@ while True:
 			print("no rain")
 			isRaining = False
 
-		# Check if finished
-		client.check_msg()
-
 		# Sleeping saves power and network traffic - frequent updates not necessary
 		time.sleep(1)
 
@@ -135,7 +121,7 @@ while True:
 	client.publish(b"esys/embedded-systeam/sensor/data", bytearray(payload))
 
 	# Diagnostic print out (could be set with hardware jumper)
-	print("Published to broker: " + str(maxSpeed))
+	print("Published to broker: " + str(payload))
 
 	# Reset servo
 	servo.write_angle(degrees = 10)
