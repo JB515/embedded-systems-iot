@@ -15,7 +15,7 @@ Drying times::
 * drying at 2m/s at 20C = approx 55 min to dry
 * => drying time = min(max(int(60.0*(240.0/(1.0 + (0.2*(gTemperature-15.0))
 *               + (gAirFlow*(gTemperature/15.0))))), 0), 14400)
-* (We should just use a machine learning algorithm in the future)
+* (Note: just use a machine learning algorithm in the future)
 '''
 
 #################################################################################
@@ -121,7 +121,7 @@ def updateTimer():
 #publish message when finished
 def finishTimer(c):
     global gTime, gTotalTime, gStarted, gPaused
-    c.publish(gPublishTopic, "finished")
+    c.publish(gPublishTopic, "finished")             #not used currently
     gStarted = False
     gTotalTime = gTime = -1
     print("\nFinished drying clothes!                   ", flush = True)
